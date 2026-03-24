@@ -1,0 +1,228 @@
+🎤 1. Speech-to-Text (STT)
+✅ Library Used
+
+Vosk
+
+sounddevice
+
+numpy
+
+json
+
+✅ Model Used
+
+vosk-model-en-in-0.5
+(Accent-friendly English model, good for Indian / non-US accents)
+
+✅ Why Vosk
+
+Works offline
+
+No hallucination (literal transcription)
+
+Low latency
+
+Better control than Whisper for assistants
+
+✅ Final STT Strategy
+
+Fixed-duration recording (4 seconds)
+
+Laptop mic verified with volume testing (Max volume: ~1198)
+
+Audio captured as 16 kHz, int16 PCM
+
+New KaldiRecognizer created per utterance
+
+No streaming or partial decoding (for stability)
+
+✅ Result
+
+STT reliably hears speech
+
+No infinite listening
+
+No random hangs
+
+Predictable behavior
+
+🧠 2. LLM Reasoning (Brain)
+✅ Library / Tool Used
+
+Ollama
+
+requests
+
+✅ Model Used
+
+llama3.1 (local)
+
+✅ How It Works
+
+User text sent via HTTP to Ollama
+
+System prompt defines personality:
+
+“AlmostHuman, a polite professional virtual receptionist”
+
+Responses kept short and clear
+
+✅ Result
+
+Fast, local reasoning
+
+No internet dependency
+
+Stable and consistent replies
+
+🔊 3. Text-to-Speech (TTS)
+✅ Library Used
+
+Piper
+
+piper-tts
+
+sounddevice
+
+numpy
+
+✅ Voice Model Used
+
+en_US-lessac-medium.onnx
+
+Downloaded correctly from Hugging Face (piper-voices)
+
+✅ Why Piper (instead of Coqui TTS)
+
+Works with Python 3.13
+
+Fully offline
+
+Very fast
+
+Natural neural voice
+
+Stable on Windows
+
+
+
+
+
+🎤 Speech-to-Text (STT)
+🔹 Vosk
+
+Vosk is an STT engine / toolkit
+
+It is not a model
+
+It runs speech recognition offline
+
+🔹 Vosk Model Used
+
+vosk-model-en-in-0.5 ✅
+This is the trained neural model.
+
+What it learned from data:
+
+How sounds map to words
+
+Accents and pronunciation patterns
+
+Language structure
+
+Your role:
+
+Provide live microphone audio
+
+Vosk converts speech → text
+
+✔️ Correct statement:
+
+Vosk is an offline speech-to-text engine that uses pretrained speech recognition models.
+
+🔊 Text-to-Speech (TTS)
+🔹 Piper
+
+Piper is a TTS engine
+
+It is not a model
+
+It converts text → speech offline
+
+🔹 Piper Model Used
+
+en_US-lessac-medium.onnx ✅
+This is the trained neural voice model.
+
+What it learned from data:
+
+Pronunciation
+
+Intonation
+
+Rhythm
+
+Phoneme-to-audio mapping
+
+Your role:
+
+Send text
+
+Piper generates audio
+
+✔️ Correct statement:
+
+Piper is a text-to-speech engine that runs pretrained neural voice models.
+
+🧠 Language Model / Reasoning
+🔹 Ollama
+
+Ollama is an LLM runtime / engine
+
+It is not a model
+
+It runs large language models locally
+
+🔹 LLM Model Used
+
+llama3.1 ✅
+This is the trained neural language model.
+
+What it learned from data:
+
+Grammar
+
+Knowledge
+
+Reasoning patterns
+
+Conversational structure
+
+Your role:
+
+Send transcribed text
+
+Receive a generated response
+
+✔️ Correct statement:
+
+Ollama is a local runtime used to run large language models such as LLaMA.
+
+🔁 Engine vs Model (MOST IMPORTANT CONCEPT)
+Component	Engine (Framework)	Trained Neural Model
+STT	Vosk	vosk-model-en-in-0.5
+TTS	Piper	en_US-lessac-medium.onnx
+LLM	Ollama	llama3.1
+🧠 One-Line Definitions (Exam-Ready)
+
+Trained neural model:
+A neural network whose parameters have been optimized using large datasets to perform a specific task.
+
+Vosk:
+An offline speech-to-text engine that uses pretrained speech recognition models.
+
+Piper:
+An offline neural text-to-speech engine that runs pretrained voice models.
+
+Ollama:
+A local runtime that enables running large language models on a personal computer.

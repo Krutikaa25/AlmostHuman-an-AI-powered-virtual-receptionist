@@ -1,0 +1,12 @@
+venv311/
+__pycache__/
+*.pyc
+backend/temp.wav
+backend/.env
+piper_models/
+frontend/armholo.vrm
+frontend/avatar.vrm
+frontend/ava.vrm
+frontend/Orion.vrm
+frontend/Un.vrm
+backend/vosk-model-en-in-0.5/
