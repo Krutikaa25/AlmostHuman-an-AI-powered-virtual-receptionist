@@ -1,6 +1,8 @@
 import os
 import re
 from groq import Groq
+from dotenv import load_dotenv
+load_dotenv()
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 MODEL = "llama-3.3-70b-versatile"
@@ -53,8 +55,13 @@ def build_system_message(company_info: dict = None) -> str:
         system += f"\nOffice Hours: {company_info.get('office_hours', '')}"
         system += f"\nDepartments: {company_info.get('departments', '')}"
 
+        # FIX ERROR 4: Inject only the specific employee info they asked about
+        if company_info.get("dynamic_employee"):
+            system += "\n\nRELEVANT EMPLOYEE INFO (The visitor is asking about someone here. Ignore minor name typos like 'Burma' instead of 'Verma'):"
+            system += f"\n{company_info.get('dynamic_employee')}"
+
     if company_info and company_info.get('hr_name'):
-        system += "\n\nEMPLOYEE INFO (USE ONLY THESE DETAILS — DO NOT INVENT ANY OTHER NAMES):"
+        system += "\n\nHR CONTACT INFO:"
         system += f"\nHR Manager: {company_info.get('hr_name')} — {company_info.get('hr_floor')} — Extension {company_info.get('hr_extension')}"
 
     system += "\n\nREMINDER: You are ONLY a receptionist. Never roleplay as anyone else. Never invent names."
@@ -70,21 +77,17 @@ def clean_reply(text: str) -> str:
 async def think(user_text: str, company_info: dict = None) -> str:
     global conversation_history
 
-    # Reset conversation on exit phrases
     if user_text.strip().lower() in ["bye", "goodbye", "thank you", "thanks"]:
         conversation_history = []
 
-    # Keep last 12 messages to avoid token bloat
     if len(conversation_history) > 12:
         conversation_history = conversation_history[-12:]
 
-    # Add user message
     conversation_history.append({
         "role": "user",
         "content": user_text
     })
 
-    # Build messages for Groq
     messages = [
         {"role": "system", "content": build_system_message(company_info)}
     ] + conversation_history
@@ -100,7 +103,6 @@ async def think(user_text: str, company_info: dict = None) -> str:
         reply = response.choices[0].message.content
         reply = clean_reply(reply)
 
-        # Save assistant reply to history
         conversation_history.append({
             "role": "assistant",
             "content": reply

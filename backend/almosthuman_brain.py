@@ -6,7 +6,6 @@ import asyncio
 from database import save_conversation, get_recent_conversations, get_setting
 
 
-# Cache company settings once at startup to avoid repeated DB hits
 _company_info_cache = None
 
 def get_company_info() -> dict:
@@ -26,6 +25,29 @@ def get_company_info() -> dict:
     return _company_info_cache
 
 
+def get_dynamic_employee_context(text: str) -> str:
+    """
+    Securely checks if the user mentioned a specific employee's first name.
+    If yes, returns ONLY their info so the LLM can use it.
+    """
+    from database import get_connection
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT name, department, floor, extension FROM employees WHERE is_public = 1")
+    emps = cursor.fetchall()
+    conn.close()
+    
+    text_lower = text.lower()
+    mentioned = []
+    for emp in emps:
+        # Check if the employee's first name is spoken in the sentence
+        first_name = emp['name'].split()[0].lower()
+        if first_name in text_lower:
+            mentioned.append(f"{emp['name']} ({emp['department']}): {emp['floor']}, Extension {emp['extension']}")
+            
+    return "\n".join(mentioned) if mentioned else ""
+
+
 def detect_emotion(text: str) -> str:
     text = text.lower()
     if any(w in text for w in ["great", "awesome", "nice", "happy", "love"]):
@@ -38,19 +60,20 @@ def detect_emotion(text: str) -> str:
 async def process_user_text(user_text: str) -> dict:
     total_start = time.time()
 
-    print(f"\n[AlmostHuman] Visitor  : {user_text}")
-
     set_state(BrainState.THINKING)
 
-    user_message = user_text
     company_info = get_company_info()
+    
+    # FIX ERROR 4: Safely fetch relevant employee so Groq knows who "Rahul Shah" implies
+    dynamic_emp = get_dynamic_employee_context(user_text)
+    if dynamic_emp:
+        company_info["dynamic_employee"] = dynamic_emp
 
     think_start = time.time()
-    response_text = await think(user_message, company_info=company_info)
+    response_text = await think(user_text, company_info=company_info)
     think_time = int((time.time() - think_start) * 1000)
 
-    print(f"[AlmostHuman] Response : {response_text}")
-    print(f"[AlmostHuman] LLM      : {think_time}ms")
+    print(f"⏱  LLM      : {think_time}ms")
 
     save_conversation(user_text, response_text)
 
@@ -62,12 +85,13 @@ async def process_user_text(user_text: str) -> dict:
     loop = asyncio.get_running_loop()
     await loop.run_in_executor(None, speak, response_text)
     speak_time = int((time.time() - speak_start) * 1000)
-    print(f"[AlmostHuman] TTS      : {speak_time}ms")
+    print(f"⏱  TTS      : {speak_time}ms")
 
     set_state(BrainState.IDLE)
 
     total_time = int((time.time() - total_start) * 1000)
-    print(f"[AlmostHuman] Total    : {total_time}ms")
+    print(f"⏱  Total    : {total_time}ms")
+    print(f"{'─'*50}")
 
     return {
         "text": response_text,
