@@ -125,8 +125,14 @@ async function startMic() {
   processor.connect(audioContext.destination);
 
   processor.onaudioprocess = (event) => {
-    // Don't capture mic while AI is thinking or speaking
-    if (currentState === "thinking" || currentState === "speaking") return;
+    // Discard mic input while AI is thinking, speaking, or in cooldown
+    if (currentState === "thinking" || currentState === "speaking" || currentState === "cooldown") {
+      // If AI took over mid-utterance, kill the silence timer so it can't
+      // fire later and overwrite the AI's status text
+      if (silenceTimer) { clearTimeout(silenceTimer); silenceTimer = null; }
+      speaking = false;
+      return;
+    }
 
     const inputData = event.inputBuffer.getChannelData(0);
 
@@ -140,14 +146,15 @@ async function startMic() {
     const pcmData = convertFloatToInt16(downsampled);
 
     if (volume > 0.015) {
+      // Only update status + log if this is the START of speech (not mid-stream)
+      if (!speaking && currentState === "idle") {
+        showStatusText("🎤 Listening...");
+        console.log("%c🎤 [LISTENING] Speech detected", "color: #4fc3f7; font-weight: bold");
+      }
       speaking = true;
-      showStatusText("🎤 Listening...");
       socket.emit("audio_chunk", pcmData);
 
-      if (silenceTimer) {
-        clearTimeout(silenceTimer);
-        silenceTimer = null;
-      }
+      if (silenceTimer) { clearTimeout(silenceTimer); silenceTimer = null; }
 
     } else if (speaking) {
       socket.emit("audio_chunk", pcmData);
@@ -156,8 +163,11 @@ async function startMic() {
         silenceTimer = setTimeout(() => {
           speaking = false;
           silenceTimer = null;
-          showStatusText("⏳ Thinking...");
-          console.log("🛑 Speech ended");
+          // Only update status if AI still hasn't taken over
+          if (currentState === "idle") {
+            showStatusText("⏳ Thinking...");
+          }
+          console.log("%c📨 [HEARD] Speech ended — sending to backend for transcription", "color: #ffb74d; font-weight: bold");
         }, 1200);
       }
     }
@@ -168,15 +178,16 @@ async function startMic() {
 
 /* ================= SOCKET EVENTS ================= */
 
-// FIX: "heard" event is emitted by the frontend itself, not the backend —
-// the backend never emits "heard". This handler was dead code causing
-// currentState to get stuck on "thinking" from a manual_response that
-// the backend also never handled. Removed entirely.
+// Close the mic gate the instant the backend starts thinking
+socket.on("ai_thinking", () => {
+  currentState = "thinking";
+  showStatusText("⏳ Thinking...");
+});
 
 socket.on("ai_response", (data) => {
   console.log("🤖 Responded:", data.text);
 
-  currentState = "speaking";
+  currentState = "speaking";  // Close mic gate immediately
   currentEmotion = data.emotion || "neutral";
   showStatusText("🗣 Speaking...");
 
